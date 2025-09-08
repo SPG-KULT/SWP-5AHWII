@@ -1,0 +1,26 @@
+datasource db {
+    provider = "sqlite"
+    url      = "file:./dev.db"
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model Question {
+    id              String   @id @default(cuid())
+    category        String
+    type            String
+    difficulty      String
+    question        String
+    answers         Answer[] @relation("QuestionAnswers") // 1-n
+    correctAnswer   Answer   @relation("CorrectAnswer", fields: [correctAnswerId], references: [id])
+    correctAnswerId String
+}
+
+model Answer {
+    id         String     @id @default(cuid())
+    answer     String
+    questions  Question[] @relation("QuestionAnswers") // n-n
+    correctFor Question[] @relation("CorrectAnswer") // 1-n
+}
