@@ -21,3 +21,8 @@ Thumbs.db
 # Env files
 .env
 .env.*
+
+**/dev.db
+**/node_modules
+
+# 
