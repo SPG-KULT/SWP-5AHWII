@@ -1,6 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "dev": "deno run --watch main.ts",
+    "seed": "deno run --allow-env --allow-read --allow-net --allow-ffi --env-file seed.ts"
   },
   "imports": {
     "@faker-js/faker": "npm:@faker-js/faker@^10.0.0",
