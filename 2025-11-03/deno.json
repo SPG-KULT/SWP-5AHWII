@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "start": "deno run -A main.ts"
+  },
+  "fmt": {
+    "options": {}
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}
