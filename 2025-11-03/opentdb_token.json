@@ -1,9 +1,9 @@
 {
-  "token": "402c86acf5cc178f80bc17e5963a7ae8de94bb3ef329f1bbb5c7a75a907501a1",
-  "fetched_at": "2025-11-03T16:47:54.170Z",
+  "token": "0beb6afe465346a7933a94e0ecbb7197116b4a561d765bfec793077d6e043200",
+  "fetched_at": "2025-11-10T15:27:41.264Z",
   "raw": {
     "response_code": 0,
     "response_message": "Token Generated Successfully!",
-    "token": "402c86acf5cc178f80bc17e5963a7ae8de94bb3ef329f1bbb5c7a75a907501a1"
+    "token": "0beb6afe465346a7933a94e0ecbb7197116b4a561d765bfec793077d6e043200"
   }
 }

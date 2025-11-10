@@ -103,46 +103,86 @@ async function main() {
     Deno.exit(2);
   }
 
-  const url = urlArg + (urlArg.includes('?') ? '&' : '?') + `token=${token}`;
-  console.log('Fetching questions from', url);
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.error('Fetch failed', res.status, res.statusText);
-    Deno.exit(3);
-  }
-  const body = await res.json();
-  if (!body.results) {
-    console.error('No results in response', body);
-    Deno.exit(4);
-  }
+  // We'll fetch in batches until the API signals no more questions.
+  // If the provided URL already contains an amount parameter, we'll use it; otherwise default to 50.
+  const hasAmount = /(?:\?|&)amount=\d+/.test(urlArg);
+  const batchSize = hasAmount ? Number((urlArg.match(/(?:\?|&)amount=(\d+)/) || [])[1]) || 50 : 50;
 
-  for (const q of body.results) {
-    // q: {category, type, difficulty, question, correct_answer, incorrect_answers[]}
-    const typeId = await getOrCreateUniqueString('Type', 'name', q.type);
-    const difficultyId = await getOrCreateUniqueString('Difficulty', 'level', q.difficulty);
-    // opentdb category id is not provided directly in response; attempt to parse from category string if it contains '(#31)'
-    // OpenTDB returns category as e.g. "Entertainment: Japanese Anime & Manga"
-    // We don't have opentdb_id here; the schema requires opentdb_id unique, but we can insert with 0 if unknown.
-    // Better: try to parse number from category if present, otherwise use 0.
-    const parsed = q.category.match(/\((?:#)?(\d+)\)$/);
-    const opentdb_id = parsed ? Number(parsed[1]) : 0;
-    const categoryId = await getOrCreateCategory(q.category, opentdb_id);
+  let nextUrlBase = urlArg.replace(/(\?|&)token=[^&]*/g, '');
+  if (!nextUrlBase) nextUrlBase = urlArg;
 
-    // insert correct answer
-    const correctAnswerId = await insertAnswer(q.correct_answer);
-    // insert question
-    const questionId = await insertQuestion(q.question, typeId, difficultyId, categoryId, correctAnswerId);
+  let insertedCount = 0;
+  let skippedCount = 0;
+  let round = 0;
 
-    // insert incorrect answers and relations
-    for (const ia of q.incorrect_answers) {
-      const aid = await insertAnswer(ia);
-      await insertIncorrectRelation(aid, questionId);
+  while (true) {
+    round++;
+    const sep = nextUrlBase.includes('?') ? '&' : '?';
+    const amountPart = /(?:\?|&)amount=\d+/.test(nextUrlBase) ? '' : `${sep}amount=${batchSize}`;
+    const url = `${nextUrlBase}${amountPart}${amountPart ? '&' : sep}token=${token}`;
+
+    console.log(`[round ${round}] Fetching ${batchSize} questions from`, url);
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error('Fetch failed', res.status, res.statusText);
+      Deno.exit(3);
+    }
+    const body = await res.json();
+
+    const code = body.response_code;
+    if (code === 3) {
+      console.error('Token not found. Please fetch a new token with fetch_token.ts');
+      Deno.exit(5);
+    }
+    if (code === 4) {
+      console.log('Token has returned all available questions for this query (response_code=4). Stopping.');
+      break;
+    }
+    if (code === 1) {
+      console.log('No results for this query (response_code=1). Stopping.');
+      break;
+    }
+    if (!body.results || body.results.length === 0) {
+      console.log('No results returned. Stopping.');
+      break;
     }
 
-    console.log(`Inserted question ${questionId}`);
+    for (const q of body.results) {
+      // q: {category, type, difficulty, question, correct_answer, incorrect_answers[]}
+      // deduplicate by exact question text
+      const existing = await runSql(`SELECT id FROM Question WHERE question = '${sqlEscape(q.question)}';`);
+      if (existing) {
+        skippedCount++;
+        continue;
+      }
+
+      const typeId = await getOrCreateUniqueString('Type', 'name', q.type);
+      const difficultyId = await getOrCreateUniqueString('Difficulty', 'level', q.difficulty);
+      const parsed = q.category.match(/\((?:#)?(\d+)\)$/);
+      const opentdb_id = parsed ? Number(parsed[1]) : 0;
+      const categoryId = await getOrCreateCategory(q.category, opentdb_id);
+
+      // insert correct answer
+      const correctAnswerId = await insertAnswer(q.correct_answer);
+      // insert question
+      const questionId = await insertQuestion(q.question, typeId, difficultyId, categoryId, correctAnswerId);
+
+      // insert incorrect answers and relations
+      for (const ia of q.incorrect_answers) {
+        const aid = await insertAnswer(ia);
+        await insertIncorrectRelation(aid, questionId);
+      }
+
+      insertedCount++;
+      console.log(`Inserted question ${questionId}`);
+    }
+
+   
+    console.log('Waiting 5 seconds before next batch...');
+    await new Promise((r) => setTimeout(r, 5000));
   }
 
-  console.log('Done.');
+  console.log(`Done. Inserted: ${insertedCount}, Skipped (duplicates): ${skippedCount}`);
 }
 
 main().catch((err) => {
