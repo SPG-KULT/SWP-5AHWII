@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz App</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎯 Quiz App</h1>
+      </header>
+
+      <!-- Start Screen -->
+      <div id="startScreen" class="screen active">
+        <div class="card">
+          <h2>Willkommen zum Quiz!</h2>
+          <p>Wähle deine Einstellungen und starte das Quiz</p>
+
+          <form id="quizForm">
+            <div class="form-group">
+              <label for="difficulty">Schwierigkeitsgrad:</label>
+              <select id="difficulty" name="difficulty" required>
+                <option value="">-- Bitte wählen --</option>
+                <option value="easy">Leicht</option>
+                <option value="medium">Mittel</option>
+                <option value="hard">Schwer</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="category">Kategorie:</label>
+              <select id="category" name="category" required>
+                <option value="">-- Bitte wählen --</option>
+                <option value="General Knowledge">Allgemeinwissen</option>
+                <option value="Entertainment: Books">Bücher</option>
+                <option value="Entertainment: Film">Film</option>
+                <option value="Entertainment: Music">Musik</option>
+                <option value="Entertainment: Musicals & Theatres">
+                  Musicals & Theater
+                </option>
+                <option value="Entertainment: Television">Fernsehen</option>
+                <option value="Entertainment: Video Games">Videospiele</option>
+                <option value="Entertainment: Board Games">Brettspiele</option>
+                <option value="Science & Nature">Wissenschaft & Natur</option>
+                <option value="Science: Computers">Computer</option>
+                <option value="Science: Mathematics">Mathematik</option>
+                <option value="Mythology">Mythologie</option>
+                <option value="Sports">Sport</option>
+                <option value="Geography">Geographie</option>
+                <option value="History">Geschichte</option>
+                <option value="Politics">Politik</option>
+                <option value="Art">Kunst</option>
+                <option value="Celebrities">Prominente</option>
+                <option value="Animals">Tiere</option>
+                <option value="Vehicles">Fahrzeuge</option>
+                <option value="Entertainment: Comics">Comics</option>
+                <option value="Science: Gadgets">Gadgets</option>
+                <option value="Entertainment: Japanese Anime & Manga">
+                  Anime & Manga
+                </option>
+                <option value="Entertainment: Cartoon & Animations">
+                  Cartoons & Animationen
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="amount">Anzahl Fragen:</label>
+              <input
+                type="number"
+                id="amount"
+                name="amount"
+                min="1"
+                max="50"
+                value="10"
+                required
+              />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Quiz starten</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Quiz Screen -->
+      <div id="quizScreen" class="screen">
+        <div class="quiz-header">
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <div class="quiz-info">
+            <span id="questionCounter">Frage 1 von 10</span>
+            <span id="score">Punkte: 0</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div id="questionContainer">
+            <h2 id="questionText" class="question-text"></h2>
+            <div id="answersContainer" class="answers-container"></div>
+          </div>
+          <button id="nextButton" class="btn btn-primary" style="display: none">
+            Nächste Frage
+          </button>
+        </div>
+      </div>
+
+      <!-- Result Screen -->
+      <div id="resultScreen" class="screen">
+        <div class="card result-card">
+          <h2>Quiz beendet! 🎉</h2>
+          <div class="result-stats">
+            <div class="stat">
+              <span class="stat-value" id="finalScore">0</span>
+              <span class="stat-label">Punkte</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="correctAnswers">0</span>
+              <span class="stat-label">Richtig</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="wrongAnswers">0</span>
+              <span class="stat-label">Falsch</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="percentage">0%</span>
+              <span class="stat-label">Genauigkeit</span>
+            </div>
+          </div>
+          <button id="restartButton" class="btn btn-primary">
+            Neues Quiz starten
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Indicator -->
+      <div id="loading" class="loading" style="display: none">
+        <div class="spinner"></div>
+        <p>Lade Fragen...</p>
+      </div>
+
+      <!-- Error Message -->
+      <div id="error" class="error" style="display: none">
+        <p id="errorMessage"></p>
+        <button id="errorButton" class="btn btn-secondary">Zurück</button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
