@@ -1,14 +1,11 @@
 import { Prisma, PrismaClient } from "../prisma/client/client.ts";
 
-// Create a singleton instance of the Prisma client
 export const prisma = new PrismaClient();
 
-// ======= Cached data for performance =======
 const cachedDifficulties = await prisma.difficulty.findMany();
 const cachedCategories = await prisma.category.findMany();
 const cachedTypes = await prisma.type.findMany();
 
-// ======= Type definitions for minimal interface =======
 export interface QuestionCreateData {
     question: string;
     difficulty: string;
@@ -31,30 +28,22 @@ export interface CategoryData {
     opentdb_id: number;
 }
 
-// ======= Helper Functions =======
-
 async function findOrCreateAnswer(answerText: string) {
-    // First try to find existing answer
     let answer = await prisma.answer.findFirst({
         where: { answer: answerText },
     });
 
     if (!answer) {
         try {
-            // Try to create new answer
             answer = await prisma.answer.create({
                 data: { answer: answerText },
             });
         } catch (_error) {
-            // If creation fails due to unique constraint (race condition),
-            // try to find the answer again
             answer = await prisma.answer.findFirst({
                 where: { answer: answerText },
             });
             if (!answer) {
-                throw new Error(
-                    `Failed to create or find answer: ${answerText}`,
-                );
+                throw new Error(`Failed to create or find answer: ${answerText}`);
             }
         }
     }
@@ -62,8 +51,6 @@ async function findOrCreateAnswer(answerText: string) {
     return answer;
 }
 
-// a function to trim whitespace from all answers in the database
-// upsert all where answer like ' %' or answer like '% '
 export async function trimWhitespaceFromAllAnswers() {
     const answers = await prisma.answer.findMany();
     let trimmedCount = 0;
@@ -77,7 +64,7 @@ export async function trimWhitespaceFromAllAnswers() {
                     data: { answer: trimmed },
                 });
             } catch (error) {
-                console.error(`Failed to update answer ${a.answer}: ${error} -- deleting answer, you will need to re-run seed`);
+                console.error(`Failed to update answer ${a.answer}: ${error}`);
                 await prisma.answer.delete({
                     where: { id: a.id },
                 });
@@ -86,8 +73,6 @@ export async function trimWhitespaceFromAllAnswers() {
     }
     console.log(`Trimming completed. Total answers trimmed: ${trimmedCount}`);
 }
-
-// ======= Question Service Functions =======
 
 export async function getAllQuestions() {
     return await prisma.question.findMany({
@@ -104,7 +89,6 @@ export async function getAllQuestions() {
 export async function createQuestion(
     new_question: QuestionCreateData,
 ): Promise<Prisma.QuestionModel | null> {
-    // Check if question already exists (since question.question is now unique)
     const existingQuestion = await prisma.question.findFirst({
         where: { question: new_question.question },
         include: {
@@ -161,20 +145,15 @@ export async function createQuestion(
             }
         }
         if (!found_diff) {
-            return null; // Return null to indicate duplicate/not stored
+            return null;
         } else {
-            console.log("================================================================================");
             console.log("DUPED QUESTION WITH DIFFERENCES");
             console.log(message);
             console.log(`incoming question: ${JSON.stringify(new_question, null, 2)}`);
-            console.log(
-                `existing question: ${JSON.stringify(existingQuestion, null, 2)}`,
-            );
-            console.log("================================================================================");
+            console.log(`existing question: ${JSON.stringify(existingQuestion, null, 2)}`);
         }
     }
 
-    // Use cached data instead of database queries
     const difficulty = cachedDifficulties.filter((d) => d.level === new_question.difficulty)[0];
     if (!difficulty) {
         throw new Error(`Difficulty '${new_question.difficulty}' not found`);
@@ -190,7 +169,6 @@ export async function createQuestion(
         throw new Error(`Type '${new_question.type}' not found`);
     }
 
-    // Find or create all answers (handles unique constraint)
     const allAnswers = await Promise.all([
         findOrCreateAnswer(new_question.correct_answer),
         ...new_question.incorrect_answers.map((answerText) => findOrCreateAnswer(answerText)),
@@ -199,7 +177,6 @@ export async function createQuestion(
     const correctAnswer = allAnswers[0];
     const incorrectAnswers = allAnswers.slice(1);
 
-    // Create the question
     return await prisma.question.create({
         data: {
             question: new_question.question,
@@ -222,9 +199,7 @@ export async function createQuestion(
 }
 
 export async function deleteAllQuestions() {
-    // First delete all questions (this will also handle the relations)
     await prisma.question.deleteMany();
-    // Then clean up orphaned answers
     await prisma.answer.deleteMany();
 }
 
@@ -258,8 +233,6 @@ export async function getQuestionByText(questionText: string) {
     });
 }
 
-// a function to trim whitespace from all questions in the database
-// upsert all where question like ' %' or question like '% '
 export async function trimWhitespaceFromAllQuestions() {
     const questions = await prisma.question.findMany();
     let trimmedCount = 0;
@@ -275,7 +248,6 @@ export async function trimWhitespaceFromAllQuestions() {
     }
     console.log(`Trimming completed. Total questions trimmed: ${trimmedCount}`);
 }
-// ======= Type Service Functions =======
 
 export function getAllTypes() {
     return cachedTypes;
@@ -332,8 +304,6 @@ export async function deleteCategories(names: string[]) {
     const result = await prisma.category.deleteMany({
         where: { name: { in: names } },
     });
-    // Note: Since cached data is loaded at module level,
-    // it won't automatically refresh. Consider restarting the application.
     return result;
 }
 

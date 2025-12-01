@@ -1,11 +1,10 @@
-// Quiz State
 let currentQuestion = 0;
 let score = 0;
 let questions = [];
 let correctCount = 0;
 let wrongCount = 0;
+let allQuestionsData = [];
 
-// DOM Elements
 const startScreen = document.getElementById('startScreen');
 const quizScreen = document.getElementById('quizScreen');
 const resultScreen = document.getElementById('resultScreen');
@@ -28,7 +27,6 @@ const restartButton = document.getElementById('restartButton');
 const errorMessage = document.getElementById('errorMessage');
 const errorButton = document.getElementById('errorButton');
 
-// Event Listeners
 quizForm.addEventListener('submit', startQuiz);
 nextButton.addEventListener('click', nextQuestion);
 restartButton.addEventListener('click', restart);
@@ -37,31 +35,47 @@ errorButton.addEventListener('click', () => {
     showScreen('start');
 });
 
-// Start Quiz
-async function startQuiz(e) {
+loadQuestionsData();
+
+async function loadQuestionsData() {
+    try {
+        const response = await fetch('questions.json');
+        if (!response.ok) {
+            throw new Error('Fragen konnten nicht geladen werden');
+        }
+        allQuestionsData = await response.json();
+    } catch (err) {
+        console.error('Error loading questions:', err);
+        showError('Fehler beim Laden der Fragendatenbank');
+    }
+}
+
+function startQuiz(e) {
     e.preventDefault();
 
     const difficulty = document.getElementById('difficulty').value;
     const category = document.getElementById('category').value;
-    const amount = document.getElementById('amount').value;
+    const amount = parseInt(document.getElementById('amount').value);
 
     try {
         showLoading();
 
-        // Fetch questions from API
-        const response = await fetch(`/questions?difficulty=${encodeURIComponent(difficulty)}&category=${encodeURIComponent(category)}&amount=${amount}`);
+        const filteredQuestions = allQuestionsData.filter(q =>
+            q.difficulty.toLowerCase() === difficulty.toLowerCase() &&
+            q.category === category
+        );
 
-        if (!response.ok) {
-            throw new Error('Fehler beim Laden der Fragen');
-        }
-
-        questions = await response.json();
-
-        if (!questions || questions.length === 0) {
+        if (filteredQuestions.length === 0) {
             throw new Error('Keine Fragen für diese Auswahl verfügbar');
         }
 
-        // Reset state
+        shuffleArray(filteredQuestions);
+        questions = filteredQuestions.slice(0, Math.min(amount, filteredQuestions.length));
+
+        if (questions.length === 0) {
+            throw new Error('Keine Fragen für diese Auswahl verfügbar');
+        }
+
         currentQuestion = 0;
         score = 0;
         correctCount = 0;
@@ -77,38 +91,31 @@ async function startQuiz(e) {
     }
 }
 
-// Display Question
 function displayQuestion() {
     const question = questions[currentQuestion];
 
-    // Update header
     questionCounter.textContent = `Frage ${currentQuestion + 1} von ${questions.length}`;
     scoreDisplay.textContent = `Punkte: ${score}`;
 
-    // Update progress bar
     const progress = ((currentQuestion + 1) / questions.length) * 100;
     progressFill.style.width = `${progress}%`;
 
-    // Decode HTML entities
     questionText.innerHTML = decodeHTML(question.question);
 
-    // Clear previous answers
     answersContainer.innerHTML = '';
 
-    // Combine and shuffle answers
     const allAnswers = [
-        { text: question.correct_answer.answer, correct: true },
-        ...question.incorrect_answers.map(ans => ({ text: ans.answer, correct: false }))
+        { text: question.correct_answer, correct: true },
+        ...question.incorrect_answers.map(ans => ({ text: ans, correct: false }))
     ];
 
-    // Shuffle answers
     shuffleArray(allAnswers);
 
-    // Create answer buttons
     allAnswers.forEach(answer => {
         const button = document.createElement('button');
         button.className = 'answer-btn';
         button.innerHTML = decodeHTML(answer.text);
+        button.dataset.correct = answer.correct;
         button.onclick = () => selectAnswer(button, answer.correct);
         answersContainer.appendChild(button);
     });
@@ -116,13 +123,10 @@ function displayQuestion() {
     nextButton.style.display = 'none';
 }
 
-// Select Answer
 function selectAnswer(button, isCorrect) {
-    // Disable all buttons
     const buttons = answersContainer.querySelectorAll('.answer-btn');
     buttons.forEach(btn => btn.disabled = true);
 
-    // Highlight correct/wrong
     if (isCorrect) {
         button.classList.add('correct');
         score += 10;
@@ -131,19 +135,16 @@ function selectAnswer(button, isCorrect) {
     } else {
         button.classList.add('wrong');
         wrongCount++;
-        // Show correct answer
         buttons.forEach(btn => {
-            if (!btn.classList.contains('wrong')) {
+            if (btn.dataset.correct === 'true') {
                 btn.classList.add('correct');
             }
         });
     }
 
-    // Show next button
     nextButton.style.display = 'block';
 }
 
-// Next Question
 function nextQuestion() {
     currentQuestion++;
 
@@ -154,7 +155,6 @@ function nextQuestion() {
     }
 }
 
-// Show Results
 function showResults() {
     finalScore.textContent = score;
     correctAnswers.textContent = correctCount;
@@ -166,7 +166,6 @@ function showResults() {
     showScreen('result');
 }
 
-// Helper Functions
 function showScreen(screen) {
     startScreen.classList.remove('active');
     quizScreen.classList.remove('active');

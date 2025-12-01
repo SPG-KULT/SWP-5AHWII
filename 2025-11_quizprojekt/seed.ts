@@ -1,5 +1,4 @@
 import { difficulties, question_types } from "./lib/seeddata.ts";
-import { echo_blank } from "./lib/helpers.ts";
 import { API_MAX_AMOUNT, DATABASE_URL } from "./lib/config.ts";
 import * as api from "./lib/apiaccess.ts";
 import { ApiQuestionData } from "./lib/apiaccess.ts";
@@ -7,14 +6,10 @@ import * as questionService from "./lib/questionservice.ts";
 import he from "he";
 
 async function seed() {
-    echo_blank();
-    console.log("================================================================================");
-    console.log("🌱 STARTING DATABASE SEED");
-    console.log(`📍 Database URL: ${DATABASE_URL}`);
-    console.log("================================================================================");
+    console.log("STARTING DATABASE SEED");
+    console.log(`Database URL: ${DATABASE_URL}`);
 
-    // Seed Question Types (multiple, boolean)
-    console.log("\n🔧 SYNCING QUESTION TYPES");
+    console.log("\nSYNCING QUESTION TYPES");
     const my_qtypes = new Set((await questionService.getAllTypes()).map((qt) => qt.type));
     const their_qtypes = new Set(question_types);
 
@@ -28,10 +23,10 @@ async function seed() {
         await questionService.deleteType(type);
     }
 
-    console.log(`   ✅ Added: ${to_add_qtypes.size}, Deleted: ${to_delete_qtypes.size}, Total: ${their_qtypes.size}`);
+    console.log(`    Added: ${to_add_qtypes.size}, Deleted: ${to_delete_qtypes.size}, Total: ${their_qtypes.size}`);
 
     // Sync Difficulties
-    console.log("\n🔧 SYNCING DIFFICULTIES");
+    console.log("\n SYNCING DIFFICULTIES");
     const my_difficulties = new Set((await questionService.getAllDifficulties()).map((d) => d.level));
     const their_difficulties = new Set(difficulties);
 
@@ -46,12 +41,12 @@ async function seed() {
     }
 
     console.log(
-        `   ✅ Added: ${to_add_difficulties.size}, Deleted: ${to_delete_difficulties.size}, Total: ${their_difficulties.size}`,
+        `    Added: ${to_add_difficulties.size}, Deleted: ${to_delete_difficulties.size}, Total: ${their_difficulties.size}`,
     );
 
     // Sync Categories
     // Sync Categories
-    console.log("\n🔧 SYNCING CATEGORIES");
+    console.log("\n SYNCING CATEGORIES");
 
     const their_categories = new Map<string, number>(
         (await api.get_categories()).map((c) => [c.name, Number.parseInt(c.id)]),
@@ -73,8 +68,8 @@ async function seed() {
         });
     }
 
-    console.log(`   ✅ Added: ${to_add_categories.size}, Deleted: ${to_delete.size}, Total: ${their_categories.size}`);
-    console.log("\n✅ Base tables synchronized successfully!");
+    console.log(`    Added: ${to_add_categories.size}, Deleted: ${to_delete.size}, Total: ${their_categories.size}`);
+    console.log("\n Base tables synchronized successfully!");
 
     // Now looping for all categories, their_categories is ok
     console.log("================================================================================");
@@ -95,7 +90,7 @@ async function seed() {
         const their_catcount = await api.questions_in_category(opentdb_id);
         globalTotalAvailable += their_catcount;
 
-        console.log(`\n📁 CATEGORY: ${categoryName} (ID: ${opentdb_id})`);
+        console.log(`\n CATEGORY: ${categoryName} (ID: ${opentdb_id})`);
         console.log(`   API has ${their_catcount} questions available`);
         const myQuestionCount = await questionService.getQuestionCountInCategory(categoryName);
         console.log(`   I have ${myQuestionCount} questions in my database for this category`);
@@ -110,7 +105,7 @@ async function seed() {
             );
             try {
                 const batch_size = not_fetched_count > API_MAX_AMOUNT ? API_MAX_AMOUNT : not_fetched_count;
-                console.log(`   📦 Batch ${batchNumber}: Fetching ${batch_size} questions...`);
+                console.log(`    Batch ${batchNumber}: Fetching ${batch_size} questions...`);
                 const response = await api.get_questions(batch_size, opentdb_id);
                 not_fetched_count -= batch_size;
 
@@ -143,23 +138,23 @@ async function seed() {
                             }
                         } catch (error) {
                             const errorMessage = error instanceof Error ? error.message : String(error);
-                            console.error(`      ❌ Error processing question: ${errorMessage}`);
+                            console.error(`       Error processing question: ${errorMessage}`);
                         }
                     }
 
                     console.log(
-                        `   📦 Batch ${batchNumber}: Processed ${batchProcessed} from API, Stored ${batchStored} (${
+                        `    Batch ${batchNumber}: Processed ${batchProcessed} from API, Stored ${batchStored} (${
                             batchProcessed - batchStored
                         } already in database)`,
                     );
                 } else {
-                    console.warn(`   ⚠️ Batch ${batchNumber}: Unexpected response code: ${response.response_code}`);
+                    console.warn(`    Batch ${batchNumber}: Unexpected response code: ${response.response_code}`);
                 }
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                console.error(`   ❌ Batch ${batchNumber}: Error fetching questions: ${errorMessage}`);
+                console.error(`    Batch ${batchNumber}: Error fetching questions: ${errorMessage}`);
                 if (error instanceof Error && error.message.includes("Token Empty")) {
-                    console.log("   🔄 Resetting token and retrying...");
+                    console.log("    Resetting token and retrying...");
                     await api.reset_token();
                     continue; // Don't increment batch number for retry, and don't update my_catcount
                 }
@@ -168,7 +163,7 @@ async function seed() {
         }
 
         console.log(
-            `📁 ${categoryName} SUMMARY: Available: ${their_catcount}, Processed: ${categoryTotalProcessed}, Stored: ${categoryTotalStored}`,
+            ` ${categoryName} SUMMARY: Available: ${their_catcount}, Processed: ${categoryTotalProcessed}, Stored: ${categoryTotalStored}`,
         );
     }
 
@@ -180,7 +175,7 @@ async function seed() {
     console.log(`Total Questions Stored: ${globalTotalStored}`);
     console.log(`Duplicate/Skipped: ${globalTotalProcessed - globalTotalStored}`);
     console.log("================================================================================");
-    console.log("✅ Seeding completed successfully!");
+    console.log(" Seeding completed successfully!");
     await questionService.trimWhitespaceFromAllAnswers();
     await questionService.trimWhitespaceFromAllQuestions();
 }
